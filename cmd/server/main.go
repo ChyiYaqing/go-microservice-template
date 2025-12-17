@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	v1 "github.com/ChyiYaqing/go-microservice-template/api/v1"
+	apiv1 "github.com/ChyiYaqing/go-microservice-template/api/proto/v1"
 	"github.com/ChyiYaqing/go-microservice-template/internal/service"
 	"github.com/ChyiYaqing/go-microservice-template/pkg/config"
 	"github.com/ChyiYaqing/go-microservice-template/pkg/logger"
@@ -74,7 +74,7 @@ func startGRPCServer(cfg *config.Config, log logger.Logger) *grpc.Server {
 
 	// Register services
 	userService := service.NewUserService()
-	v1.RegisterUserServiceServer(grpcServer, userService)
+	apiv1.RegisterUserServiceServer(grpcServer, userService)
 
 	// Register reflection service for grpcurl
 	reflection.Register(grpcServer)
@@ -113,7 +113,7 @@ func startHTTPServer(ctx context.Context, cfg *config.Config, log logger.Logger)
 	)
 
 	// Register service handlers
-	if err := v1.RegisterUserServiceHandler(ctx, mux, conn); err != nil {
+	if err := apiv1.RegisterUserServiceHandler(ctx, mux, conn); err != nil {
 		log.Error("Failed to register gateway: %v", err)
 		os.Exit(1)
 	}

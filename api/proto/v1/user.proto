@@ -42,7 +42,7 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
 message User {
   // The resource name of the user.
   // Format: users/{user_id}
-  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+  string name = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
 
   // The user's email address
   string email = 2 [(google.api.field_behavior) = REQUIRED];
@@ -73,10 +73,7 @@ message CreateUserRequest {
 message GetUserRequest {
   // The resource name of the user to retrieve.
   // Format: users/{user_id}
-  string name = 1 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.field_behavior) = IDENTIFIER
-  ];
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Request message for ListUsers
@@ -126,10 +123,7 @@ message UpdateUserRequest {
 message DeleteUserRequest {
   // The resource name of the user to delete.
   // Format: users/{user_id}
-  string name = 1 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.field_behavior) = IDENTIFIER
-  ];
+  string name = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Request message for BatchGetUsers
@@ -137,10 +131,7 @@ message BatchGetUsersRequest {
   // The resource names of the users to retrieve.
   // Format: users/{user_id}
   // A maximum of 1000 users can be retrieved in a batch.
-  repeated string names = 1 [
-    (google.api.field_behavior) = REQUIRED,
-    (google.api.field_behavior) = IDENTIFIER
-  ];
+  repeated string names = 1 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Response message for BatchGetUsers

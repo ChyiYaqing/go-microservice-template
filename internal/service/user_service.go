@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"sync"
-	"time"
 
-	v1 "github.com/ChyiYaqing/go-microservice-template/api/v1"
+	apiv1 "github.com/ChyiYaqing/go-microservice-template/api/proto/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -16,8 +15,8 @@ import (
 
 // UserService implements the UserServiceServer interface
 type UserService struct {
-	v1.UnimplementedUserServiceServer
-	users map[string]*v1.User
+	apiv1.UnimplementedUserServiceServer
+	users map[string]*apiv1.User
 	mu    sync.RWMutex
 	nextID int
 }
@@ -25,13 +24,13 @@ type UserService struct {
 // NewUserService creates a new UserService
 func NewUserService() *UserService {
 	return &UserService{
-		users: make(map[string]*v1.User),
+		users: make(map[string]*apiv1.User),
 		nextID: 1,
 	}
 }
 
 // CreateUser creates a new user
-func (s *UserService) CreateUser(ctx context.Context, req *v1.CreateUserRequest) (*v1.User, error) {
+func (s *UserService) CreateUser(ctx context.Context, req *apiv1.CreateUserRequest) (*apiv1.User, error) {
 	if req.GetUser() == nil {
 		return nil, status.Error(codes.InvalidArgument, "user is required")
 	}
@@ -48,7 +47,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *v1.CreateUserRequest)
 	s.nextID++
 
 	now := timestamppb.Now()
-	user := &v1.User{
+	user := &apiv1.User{
 		Name:        fmt.Sprintf("users/%s", userID),
 		Email:       req.GetUser().GetEmail(),
 		DisplayName: req.GetUser().GetDisplayName(),
@@ -63,7 +62,7 @@ func (s *UserService) CreateUser(ctx context.Context, req *v1.CreateUserRequest)
 }
 
 // GetUser retrieves a user by resource name
-func (s *UserService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.User, error) {
+func (s *UserService) GetUser(ctx context.Context, req *apiv1.GetUserRequest) (*apiv1.User, error) {
 	if req.GetName() == "" {
 		return nil, status.Error(codes.InvalidArgument, "name is required")
 	}
@@ -80,7 +79,7 @@ func (s *UserService) GetUser(ctx context.Context, req *v1.GetUserRequest) (*v1.
 }
 
 // ListUsers lists users with pagination
-func (s *UserService) ListUsers(ctx context.Context, req *v1.ListUsersRequest) (*v1.ListUsersResponse, error) {
+func (s *UserService) ListUsers(ctx context.Context, req *apiv1.ListUsersRequest) (*apiv1.ListUsersResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -93,7 +92,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *v1.ListUsersRequest) (
 	}
 
 	// Convert map to slice
-	var allUsers []*v1.User
+	var allUsers []*apiv1.User
 	for _, user := range s.users {
 		allUsers = allUsers
 		allUsers = append(allUsers, user)
@@ -118,7 +117,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *v1.ListUsersRequest) (
 		nextPageToken = fmt.Sprintf("%d", end)
 	}
 
-	return &v1.ListUsersResponse{
+	return &apiv1.ListUsersResponse{
 		Users:         users,
 		NextPageToken: nextPageToken,
 		TotalSize:     int32(len(allUsers)),
@@ -126,7 +125,7 @@ func (s *UserService) ListUsers(ctx context.Context, req *v1.ListUsersRequest) (
 }
 
 // UpdateUser updates a user
-func (s *UserService) UpdateUser(ctx context.Context, req *v1.UpdateUserRequest) (*v1.User, error) {
+func (s *UserService) UpdateUser(ctx context.Context, req *apiv1.UpdateUserRequest) (*apiv1.User, error) {
 	if req.GetUser() == nil {
 		return nil, status.Error(codes.InvalidArgument, "user is required")
 	}
@@ -165,7 +164,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *v1.UpdateUserRequest)
 }
 
 // DeleteUser deletes a user
-func (s *UserService) DeleteUser(ctx context.Context, req *v1.DeleteUserRequest) (*emptypb.Empty, error) {
+func (s *UserService) DeleteUser(ctx context.Context, req *apiv1.DeleteUserRequest) (*emptypb.Empty, error) {
 	if req.GetName() == "" {
 		return nil, status.Error(codes.InvalidArgument, "name is required")
 	}
@@ -182,7 +181,7 @@ func (s *UserService) DeleteUser(ctx context.Context, req *v1.DeleteUserRequest)
 }
 
 // BatchGetUsers retrieves multiple users
-func (s *UserService) BatchGetUsers(ctx context.Context, req *v1.BatchGetUsersRequest) (*v1.BatchGetUsersResponse, error) {
+func (s *UserService) BatchGetUsers(ctx context.Context, req *apiv1.BatchGetUsersRequest) (*apiv1.BatchGetUsersResponse, error) {
 	if len(req.GetNames()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "names is required")
 	}
@@ -194,20 +193,20 @@ func (s *UserService) BatchGetUsers(ctx context.Context, req *v1.BatchGetUsersRe
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	var users []*v1.User
+	var users []*apiv1.User
 	for _, name := range req.GetNames() {
 		if user, exists := s.users[name]; exists {
 			users = append(users, user)
 		}
 	}
 
-	return &v1.BatchGetUsersResponse{
+	return &apiv1.BatchGetUsersResponse{
 		Users: users,
 	}, nil
 }
 
 // updateUserWithMask updates user fields based on field mask
-func updateUserWithMask(dst, src *v1.User, mask *fieldmaskpb.FieldMask) {
+func updateUserWithMask(dst, src *apiv1.User, mask *fieldmaskpb.FieldMask) {
 	for _, path := range mask.GetPaths() {
 		switch path {
 		case "email":

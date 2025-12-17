@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	v1 "github.com/ChyiYaqing/go-microservice-template/api/v1"
+	apiv1 "github.com/ChyiYaqing/go-microservice-template/api/proto/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,13 +15,13 @@ func TestCreateUser(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		req     *v1.CreateUserRequest
+		req     *apiv1.CreateUserRequest
 		wantErr bool
 	}{
 		{
 			name: "valid user",
-			req: &v1.CreateUserRequest{
-				User: &v1.User{
+			req: &apiv1.CreateUserRequest{
+				User: &apiv1.User{
 					Email:       "test@example.com",
 					DisplayName: "Test User",
 				},
@@ -30,8 +30,8 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			name: "missing email",
-			req: &v1.CreateUserRequest{
-				User: &v1.User{
+			req: &apiv1.CreateUserRequest{
+				User: &apiv1.User{
 					DisplayName: "Test User",
 				},
 			},
@@ -39,7 +39,7 @@ func TestCreateUser(t *testing.T) {
 		},
 		{
 			name:    "nil user",
-			req:     &v1.CreateUserRequest{},
+			req:     &apiv1.CreateUserRequest{},
 			wantErr: true,
 		},
 	}
@@ -71,8 +71,8 @@ func TestGetUser(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a user first
-	createReq := &v1.CreateUserRequest{
-		User: &v1.User{
+	createReq := &apiv1.CreateUserRequest{
+		User: &apiv1.User{
 			Email:       "test@example.com",
 			DisplayName: "Test User",
 		},
@@ -84,26 +84,26 @@ func TestGetUser(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		req     *v1.GetUserRequest
+		req     *apiv1.GetUserRequest
 		wantErr bool
 	}{
 		{
 			name: "existing user",
-			req: &v1.GetUserRequest{
+			req: &apiv1.GetUserRequest{
 				Name: createdUser.Name,
 			},
 			wantErr: false,
 		},
 		{
 			name: "non-existing user",
-			req: &v1.GetUserRequest{
+			req: &apiv1.GetUserRequest{
 				Name: "users/999",
 			},
 			wantErr: true,
 		},
 		{
 			name:    "empty name",
-			req:     &v1.GetUserRequest{},
+			req:     &apiv1.GetUserRequest{},
 			wantErr: true,
 		},
 	}
@@ -133,8 +133,8 @@ func TestListUsers(t *testing.T) {
 
 	// Create some users
 	for i := 0; i < 5; i++ {
-		_, err := svc.CreateUser(ctx, &v1.CreateUserRequest{
-			User: &v1.User{
+		_, err := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
+			User: &apiv1.User{
 				Email:       "test@example.com",
 				DisplayName: "Test User",
 			},
@@ -146,19 +146,19 @@ func TestListUsers(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		req      *v1.ListUsersRequest
+		req      *apiv1.ListUsersRequest
 		wantErr  bool
 		minUsers int
 	}{
 		{
 			name:     "list all users",
-			req:      &v1.ListUsersRequest{},
+			req:      &apiv1.ListUsersRequest{},
 			wantErr:  false,
 			minUsers: 5,
 		},
 		{
 			name: "list with page size",
-			req: &v1.ListUsersRequest{
+			req: &apiv1.ListUsersRequest{
 				PageSize: 2,
 			},
 			wantErr:  false,
@@ -193,8 +193,8 @@ func TestUpdateUser(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a user first
-	createReq := &v1.CreateUserRequest{
-		User: &v1.User{
+	createReq := &apiv1.CreateUserRequest{
+		User: &apiv1.User{
 			Email:       "test@example.com",
 			DisplayName: "Test User",
 		},
@@ -206,13 +206,13 @@ func TestUpdateUser(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		req     *v1.UpdateUserRequest
+		req     *apiv1.UpdateUserRequest
 		wantErr bool
 	}{
 		{
 			name: "valid update",
-			req: &v1.UpdateUserRequest{
-				User: &v1.User{
+			req: &apiv1.UpdateUserRequest{
+				User: &apiv1.User{
 					Name:        createdUser.Name,
 					Email:       "updated@example.com",
 					DisplayName: "Updated User",
@@ -222,8 +222,8 @@ func TestUpdateUser(t *testing.T) {
 		},
 		{
 			name: "non-existing user",
-			req: &v1.UpdateUserRequest{
-				User: &v1.User{
+			req: &apiv1.UpdateUserRequest{
+				User: &apiv1.User{
 					Name:  "users/999",
 					Email: "test@example.com",
 				},
@@ -232,7 +232,7 @@ func TestUpdateUser(t *testing.T) {
 		},
 		{
 			name:    "nil user",
-			req:     &v1.UpdateUserRequest{},
+			req:     &apiv1.UpdateUserRequest{},
 			wantErr: true,
 		},
 	}
@@ -261,8 +261,8 @@ func TestDeleteUser(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a user first
-	createReq := &v1.CreateUserRequest{
-		User: &v1.User{
+	createReq := &apiv1.CreateUserRequest{
+		User: &apiv1.User{
 			Email:       "test@example.com",
 			DisplayName: "Test User",
 		},
@@ -274,26 +274,26 @@ func TestDeleteUser(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		req     *v1.DeleteUserRequest
+		req     *apiv1.DeleteUserRequest
 		wantErr bool
 	}{
 		{
 			name: "existing user",
-			req: &v1.DeleteUserRequest{
+			req: &apiv1.DeleteUserRequest{
 				Name: createdUser.Name,
 			},
 			wantErr: false,
 		},
 		{
 			name: "non-existing user",
-			req: &v1.DeleteUserRequest{
+			req: &apiv1.DeleteUserRequest{
 				Name: "users/999",
 			},
 			wantErr: true,
 		},
 		{
 			name:    "empty name",
-			req:     &v1.DeleteUserRequest{},
+			req:     &apiv1.DeleteUserRequest{},
 			wantErr: true,
 		},
 	}
@@ -329,8 +329,8 @@ func TestBatchGetUsers(t *testing.T) {
 	// Create some users
 	var userNames []string
 	for i := 0; i < 3; i++ {
-		user, err := svc.CreateUser(ctx, &v1.CreateUserRequest{
-			User: &v1.User{
+		user, err := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
+			User: &apiv1.User{
 				Email:       "test@example.com",
 				DisplayName: "Test User",
 			},
@@ -343,13 +343,13 @@ func TestBatchGetUsers(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		req      *v1.BatchGetUsersRequest
+		req      *apiv1.BatchGetUsersRequest
 		wantErr  bool
 		wantSize int
 	}{
 		{
 			name: "existing users",
-			req: &v1.BatchGetUsersRequest{
+			req: &apiv1.BatchGetUsersRequest{
 				Names: userNames,
 			},
 			wantErr:  false,
@@ -357,12 +357,12 @@ func TestBatchGetUsers(t *testing.T) {
 		},
 		{
 			name:    "empty names",
-			req:     &v1.BatchGetUsersRequest{},
+			req:     &apiv1.BatchGetUsersRequest{},
 			wantErr: true,
 		},
 		{
 			name: "mixed existing and non-existing",
-			req: &v1.BatchGetUsersRequest{
+			req: &apiv1.BatchGetUsersRequest{
 				Names: append(userNames, "users/999"),
 			},
 			wantErr:  false,
