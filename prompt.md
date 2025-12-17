@@ -1,0 +1,2 @@
+我想创建一个go微服务的项目模版，
+使用grpc,grpc-gateway,对外提供gRPC,restful API两种接口，并且接口需要符合Google定义的API规范，并且Restful API需要对外提供Swagger文档方便业务方对接。并且提供完善的Makefile,README支持

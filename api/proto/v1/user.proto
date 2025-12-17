@@ -1,0 +1,227 @@
+syntax = "proto3";
+
+package api.v1;
+
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/field_mask.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+
+option go_package = "github.com/chyiyaqing/go-microservice-template/api/v1;v1";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "User Service API";
+    version: "1.0";
+    description: "A microservice template with gRPC and RESTful APIs following Google API design guide";
+    contact: {
+      name: "API Support";
+      email: "support@example.com";
+    };
+  };
+  schemes: HTTP;
+  schemes: HTTPS;
+  consumes: "application/json";
+  produces: "application/json";
+  responses: {
+    key: "404";
+    value: {
+      description: "Returned when the resource does not exist.";
+      schema: {
+        json_schema: {
+          type: STRING;
+        }
+      }
+    }
+  }
+};
+
+// User represents a user resource
+message User {
+  // The resource name of the user.
+  // Format: users/{user_id}
+  string name = 1 [(google.api.field_behavior) = IDENTIFIER];
+
+  // The user's email address
+  string email = 2 [(google.api.field_behavior) = REQUIRED];
+
+  // The user's display name
+  string display_name = 3;
+
+  // The user's phone number
+  string phone_number = 4;
+
+  // The time when the user was created
+  google.protobuf.Timestamp create_time = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // The time when the user was last updated
+  google.protobuf.Timestamp update_time = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+
+  // Whether the user is active
+  bool is_active = 7;
+}
+
+// Request message for CreateUser
+message CreateUserRequest {
+  // The user resource to create
+  User user = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request message for GetUser
+message GetUserRequest {
+  // The resource name of the user to retrieve.
+  // Format: users/{user_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+}
+
+// Request message for ListUsers
+message ListUsersRequest {
+  // The maximum number of users to return. The service may return fewer than this value.
+  // If unspecified, at most 50 users will be returned.
+  // The maximum value is 1000; values above 1000 will be coerced to 1000.
+  int32 page_size = 1;
+
+  // A page token, received from a previous `ListUsers` call.
+  // Provide this to retrieve the subsequent page.
+  string page_token = 2;
+
+  // Filter expression to filter users
+  string filter = 3;
+
+  // Sort order for results
+  string order_by = 4;
+}
+
+// Response message for ListUsers
+message ListUsersResponse {
+  // The list of users
+  repeated User users = 1;
+
+  // A token to retrieve the next page of results.
+  // Pass this value in the ListUsersRequest.page_token field
+  // in the subsequent call to `ListUsers` method to retrieve the next page.
+  string next_page_token = 2;
+
+  // Total count of users (optional)
+  int32 total_size = 3;
+}
+
+// Request message for UpdateUser
+message UpdateUserRequest {
+  // The user resource to update
+  User user = 1 [(google.api.field_behavior) = REQUIRED];
+
+  // The update mask applies to the resource.
+  // For the FieldMask definition, see
+  // https://developers.google.com/protocol-buffers/docs/reference/google.protobuf#fieldmask
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+// Request message for DeleteUser
+message DeleteUserRequest {
+  // The resource name of the user to delete.
+  // Format: users/{user_id}
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+}
+
+// Request message for BatchGetUsers
+message BatchGetUsersRequest {
+  // The resource names of the users to retrieve.
+  // Format: users/{user_id}
+  // A maximum of 1000 users can be retrieved in a batch.
+  repeated string names = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.field_behavior) = IDENTIFIER
+  ];
+}
+
+// Response message for BatchGetUsers
+message BatchGetUsersResponse {
+  // Users requested
+  repeated User users = 1;
+}
+
+// UserService manages user resources
+service UserService {
+  // Creates a new user
+  rpc CreateUser(CreateUserRequest) returns (User) {
+    option (google.api.http) = {
+      post: "/v1/users"
+      body: "user"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Create a new user";
+      description: "Creates a new user with the provided information";
+      tags: "Users";
+    };
+  }
+
+  // Gets a user by resource name
+  rpc GetUser(GetUserRequest) returns (User) {
+    option (google.api.http) = {
+      get: "/v1/{name=users/*}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Get a user";
+      description: "Retrieves a user by their resource name";
+      tags: "Users";
+    };
+  }
+
+  // Lists users
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+    option (google.api.http) = {
+      get: "/v1/users"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "List users";
+      description: "Retrieves a paginated list of users";
+      tags: "Users";
+    };
+  }
+
+  // Updates a user
+  rpc UpdateUser(UpdateUserRequest) returns (User) {
+    option (google.api.http) = {
+      patch: "/v1/{user.name=users/*}"
+      body: "user"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Update a user";
+      description: "Updates an existing user with the provided information";
+      tags: "Users";
+    };
+  }
+
+  // Deletes a user
+  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/v1/{name=users/*}"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Delete a user";
+      description: "Deletes a user by their resource name";
+      tags: "Users";
+    };
+  }
+
+  // Batch get users
+  rpc BatchGetUsers(BatchGetUsersRequest) returns (BatchGetUsersResponse) {
+    option (google.api.http) = {
+      get: "/v1/users:batchGet"
+    };
+    option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+      summary: "Batch get users";
+      description: "Retrieves multiple users in a single request";
+      tags: "Users";
+    };
+  }
+}
