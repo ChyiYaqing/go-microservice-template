@@ -1,4 +1,4 @@
-module github.com/chyiyaqing/go-microservice-template
+module github.com/ChyiYaqing/go-microservice-template
 
 go 1.25
 
