@@ -6,9 +6,7 @@ import (
 	"sync"
 
 	apiv1 "github.com/ChyiYaqing/go-microservice-template/api/proto/v1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
+	"github.com/ChyiYaqing/go-microservice-template/pkg/response"
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -30,13 +28,13 @@ func NewUserService() *UserService {
 }
 
 // CreateUser creates a new user
-func (s *UserService) CreateUser(ctx context.Context, req *apiv1.CreateUserRequest) (*apiv1.User, error) {
+func (s *UserService) CreateUser(ctx context.Context, req *apiv1.CreateUserRequest) (*apiv1.CommonResponse, error) {
 	if req.GetUser() == nil {
-		return nil, status.Error(codes.InvalidArgument, "user is required")
+		return response.InvalidArgument("user is required"), nil
 	}
 
 	if req.GetUser().GetEmail() == "" {
-		return nil, status.Error(codes.InvalidArgument, "email is required")
+		return response.InvalidArgument("email is required"), nil
 	}
 
 	s.mu.Lock()
@@ -58,13 +56,13 @@ func (s *UserService) CreateUser(ctx context.Context, req *apiv1.CreateUserReque
 	}
 
 	s.users[user.Name] = user
-	return user, nil
+	return response.Success(user)
 }
 
 // GetUser retrieves a user by resource name
-func (s *UserService) GetUser(ctx context.Context, req *apiv1.GetUserRequest) (*apiv1.User, error) {
+func (s *UserService) GetUser(ctx context.Context, req *apiv1.GetUserRequest) (*apiv1.CommonResponse, error) {
 	if req.GetName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "name is required")
+		return response.InvalidArgument("name is required"), nil
 	}
 
 	s.mu.RLock()
@@ -72,14 +70,14 @@ func (s *UserService) GetUser(ctx context.Context, req *apiv1.GetUserRequest) (*
 
 	user, exists := s.users[req.GetName()]
 	if !exists {
-		return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetName())
+		return response.NotFound(fmt.Sprintf("user %s not found", req.GetName())), nil
 	}
 
-	return user, nil
+	return response.Success(user)
 }
 
 // ListUsers lists users with pagination
-func (s *UserService) ListUsers(ctx context.Context, req *apiv1.ListUsersRequest) (*apiv1.ListUsersResponse, error) {
+func (s *UserService) ListUsers(ctx context.Context, req *apiv1.ListUsersRequest) (*apiv1.CommonResponse, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -94,7 +92,6 @@ func (s *UserService) ListUsers(ctx context.Context, req *apiv1.ListUsersRequest
 	// Convert map to slice
 	var allUsers []*apiv1.User
 	for _, user := range s.users {
-		allUsers = allUsers
 		allUsers = append(allUsers, user)
 	}
 
@@ -117,21 +114,21 @@ func (s *UserService) ListUsers(ctx context.Context, req *apiv1.ListUsersRequest
 		nextPageToken = fmt.Sprintf("%d", end)
 	}
 
-	return &apiv1.ListUsersResponse{
-		Users:         users,
-		NextPageToken: nextPageToken,
-		TotalSize:     int32(len(allUsers)),
-	}, nil
+	return response.Success(map[string]interface{}{
+		"users":           users,
+		"next_page_token": nextPageToken,
+		"total_size":      len(allUsers),
+	})
 }
 
 // UpdateUser updates a user
-func (s *UserService) UpdateUser(ctx context.Context, req *apiv1.UpdateUserRequest) (*apiv1.User, error) {
+func (s *UserService) UpdateUser(ctx context.Context, req *apiv1.UpdateUserRequest) (*apiv1.CommonResponse, error) {
 	if req.GetUser() == nil {
-		return nil, status.Error(codes.InvalidArgument, "user is required")
+		return response.InvalidArgument("user is required"), nil
 	}
 
 	if req.GetUser().GetName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "user.name is required")
+		return response.InvalidArgument("user.name is required"), nil
 	}
 
 	s.mu.Lock()
@@ -139,7 +136,7 @@ func (s *UserService) UpdateUser(ctx context.Context, req *apiv1.UpdateUserReque
 
 	user, exists := s.users[req.GetUser().GetName()]
 	if !exists {
-		return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetUser().GetName())
+		return response.NotFound(fmt.Sprintf("user %s not found", req.GetUser().GetName())), nil
 	}
 
 	// Apply field mask if provided
@@ -160,34 +157,34 @@ func (s *UserService) UpdateUser(ctx context.Context, req *apiv1.UpdateUserReque
 	}
 
 	user.UpdateTime = timestamppb.Now()
-	return user, nil
+	return response.Success(user)
 }
 
 // DeleteUser deletes a user
-func (s *UserService) DeleteUser(ctx context.Context, req *apiv1.DeleteUserRequest) (*emptypb.Empty, error) {
+func (s *UserService) DeleteUser(ctx context.Context, req *apiv1.DeleteUserRequest) (*apiv1.CommonResponse, error) {
 	if req.GetName() == "" {
-		return nil, status.Error(codes.InvalidArgument, "name is required")
+		return response.InvalidArgument("name is required"), nil
 	}
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, exists := s.users[req.GetName()]; !exists {
-		return nil, status.Errorf(codes.NotFound, "user %s not found", req.GetName())
+		return response.NotFound(fmt.Sprintf("user %s not found", req.GetName())), nil
 	}
 
 	delete(s.users, req.GetName())
-	return &emptypb.Empty{}, nil
+	return response.SuccessEmpty(), nil
 }
 
 // BatchGetUsers retrieves multiple users
-func (s *UserService) BatchGetUsers(ctx context.Context, req *apiv1.BatchGetUsersRequest) (*apiv1.BatchGetUsersResponse, error) {
+func (s *UserService) BatchGetUsers(ctx context.Context, req *apiv1.BatchGetUsersRequest) (*apiv1.CommonResponse, error) {
 	if len(req.GetNames()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "names is required")
+		return response.InvalidArgument("names is required"), nil
 	}
 
 	if len(req.GetNames()) > 1000 {
-		return nil, status.Error(codes.InvalidArgument, "cannot retrieve more than 1000 users at once")
+		return response.InvalidArgument("cannot retrieve more than 1000 users at once"), nil
 	}
 
 	s.mu.RLock()
@@ -200,9 +197,9 @@ func (s *UserService) BatchGetUsers(ctx context.Context, req *apiv1.BatchGetUser
 		}
 	}
 
-	return &apiv1.BatchGetUsersResponse{
-		Users: users,
-	}, nil
+	return response.Success(map[string]interface{}{
+		"users": users,
+	})
 }
 
 // updateUserWithMask updates user fields based on field mask

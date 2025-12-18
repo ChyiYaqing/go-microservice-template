@@ -1,14 +1,15 @@
+# 声明伪目标,执行时总是重新运行命令，避免与同名文件冲突
 .PHONY: help init proto build run test clean docker lint fmt vet install-tools
 
 # Default target
 .DEFAULT_GOAL := help
 
 # Variables
-APP_NAME := go-microservice-template
-CMD_DIR := ./cmd/server
-BIN_DIR := ./bin
-PROTO_DIR := ./api/proto/v1
-SWAGGER_DIR := ./docs/swagger
+APP_NAME := go-microservice-template 	# 可执行文件名称
+CMD_DIR := ./cmd/server 				# 主程序目录
+BIN_DIR := ./bin 						# 可执行文件输出目录
+PROTO_DIR := ./api/proto/v1 			# Proto文件目录
+SWAGGER_DIR := ./docs/swagger 			# Swagger文件目录
 
 # Colors for output
 COLOR_RESET := \033[0m
@@ -30,7 +31,7 @@ init: ## Initialize project dependencies
 install-tools: ## Install required tools (buf, protoc plugins)
 	@echo "$(COLOR_BLUE)Installing required tools...$(COLOR_RESET)"
 	@echo "Installing buf..."
-	@go install github.com/bufbuild/buf/cmd/buf@latest
+	@go install github.com/bufbuild/buf/cmd/buf@latest 						# 现代的 Protobuf 工具链
 	@echo "Installing protoc-gen-go..."
 	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 	@echo "Installing protoc-gen-go-grpc..."
@@ -63,7 +64,7 @@ run-dev: proto ## Run without building (using go run)
 
 test: ## Run tests
 	@echo "$(COLOR_BLUE)Running tests...$(COLOR_RESET)"
-	@go test -v -race -cover ./...
+	@go test -v -race -cover ./...  # -race 启用数据竞争检测
 	@echo "$(COLOR_GREEN)Tests complete$(COLOR_RESET)"
 
 test-coverage: ## Run tests with coverage report
@@ -87,7 +88,7 @@ fmt: ## Format code
 
 vet: ## Run go vet
 	@echo "$(COLOR_BLUE)Running go vet...$(COLOR_RESET)"
-	@go vet ./...
+	@go vet ./... 	# 静态分析工具，检查代码中的潜在错误
 	@echo "$(COLOR_GREEN)Vet complete$(COLOR_RESET)"
 
 clean: ## Clean build artifacts

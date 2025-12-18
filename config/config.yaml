@@ -1,6 +1,6 @@
 server:
-  grpc_port: 9090
-  http_port: 8080
+  grpc_port: 9099
+  http_port: 8088
   host: "0.0.0.0"
 
 log:

@@ -7,9 +7,10 @@ import "google/api/field_behavior.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/field_mask.proto";
+import "google/protobuf/struct.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-option go_package = "github.com/ChyiYaqing/go-microservice-template/api/v1;v1";
+option go_package = "github.com/ChyiYaqing/go-microservice-template/api/proto/v1;apiv1";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
@@ -37,6 +38,18 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
     }
   }
 };
+
+// CommonResponse is a unified response structure for all APIs
+message CommonResponse {
+  // Error code: 0 for success, non-zero for application-specific errors
+  int32 error_code = 1;
+
+  // Human-readable error message
+  string error_msg = 2;
+
+  // Flexible data payload using structured value
+  google.protobuf.Struct data = 3;
+}
 
 // User represents a user resource
 message User {
@@ -143,75 +156,75 @@ message BatchGetUsersResponse {
 // UserService manages user resources
 service UserService {
   // Creates a new user
-  rpc CreateUser(CreateUserRequest) returns (User) {
+  rpc CreateUser(CreateUserRequest) returns (CommonResponse) {
     option (google.api.http) = {
       post: "/v1/users"
       body: "user"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Create a new user";
-      description: "Creates a new user with the provided information";
+      description: "Creates a new user with the provided information. Returns user data in the data field on success.";
       tags: "Users";
     };
   }
 
   // Gets a user by resource name
-  rpc GetUser(GetUserRequest) returns (User) {
+  rpc GetUser(GetUserRequest) returns (CommonResponse) {
     option (google.api.http) = {
       get: "/v1/{name=users/*}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Get a user";
-      description: "Retrieves a user by their resource name";
+      description: "Retrieves a user by their resource name. Returns user data in the data field on success.";
       tags: "Users";
     };
   }
 
   // Lists users
-  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+  rpc ListUsers(ListUsersRequest) returns (CommonResponse) {
     option (google.api.http) = {
       get: "/v1/users"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "List users";
-      description: "Retrieves a paginated list of users";
+      description: "Retrieves a paginated list of users. Returns users array, next_page_token and total_size in the data field on success.";
       tags: "Users";
     };
   }
 
   // Updates a user
-  rpc UpdateUser(UpdateUserRequest) returns (User) {
+  rpc UpdateUser(UpdateUserRequest) returns (CommonResponse) {
     option (google.api.http) = {
       patch: "/v1/{user.name=users/*}"
       body: "user"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Update a user";
-      description: "Updates an existing user with the provided information";
+      description: "Updates an existing user with the provided information. Returns updated user data in the data field on success.";
       tags: "Users";
     };
   }
 
   // Deletes a user
-  rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty) {
+  rpc DeleteUser(DeleteUserRequest) returns (CommonResponse) {
     option (google.api.http) = {
       delete: "/v1/{name=users/*}"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Delete a user";
-      description: "Deletes a user by their resource name";
+      description: "Deletes a user by their resource name. Returns empty data field on success.";
       tags: "Users";
     };
   }
 
   // Batch get users
-  rpc BatchGetUsers(BatchGetUsersRequest) returns (BatchGetUsersResponse) {
+  rpc BatchGetUsers(BatchGetUsersRequest) returns (CommonResponse) {
     option (google.api.http) = {
       get: "/v1/users:batchGet"
     };
     option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
       summary: "Batch get users";
-      description: "Retrieves multiple users in a single request";
+      description: "Retrieves multiple users in a single request. Returns users array in the data field on success.";
       tags: "Users";
     };
   }

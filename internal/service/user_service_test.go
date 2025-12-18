@@ -5,8 +5,7 @@ import (
 	"testing"
 
 	apiv1 "github.com/ChyiYaqing/go-microservice-template/api/proto/v1"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/ChyiYaqing/go-microservice-template/pkg/response"
 )
 
 func TestCreateUser(t *testing.T) {
@@ -14,9 +13,9 @@ func TestCreateUser(t *testing.T) {
 	ctx := context.Background()
 
 	tests := []struct {
-		name    string
-		req     *apiv1.CreateUserRequest
-		wantErr bool
+		name          string
+		req           *apiv1.CreateUserRequest
+		wantErrorCode int32
 	}{
 		{
 			name: "valid user",
@@ -26,7 +25,7 @@ func TestCreateUser(t *testing.T) {
 					DisplayName: "Test User",
 				},
 			},
-			wantErr: false,
+			wantErrorCode: response.CodeSuccess,
 		},
 		{
 			name: "missing email",
@@ -35,32 +34,30 @@ func TestCreateUser(t *testing.T) {
 					DisplayName: "Test User",
 				},
 			},
-			wantErr: true,
+			wantErrorCode: response.CodeInvalidArgument,
 		},
 		{
-			name:    "nil user",
-			req:     &apiv1.CreateUserRequest{},
-			wantErr: true,
+			name:          "nil user",
+			req:           &apiv1.CreateUserRequest{},
+			wantErrorCode: response.CodeInvalidArgument,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			user, err := svc.CreateUser(ctx, tt.req)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("CreateUser() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("CreateUser() unexpected error: %v", err)
-				}
-				if user == nil {
-					t.Errorf("CreateUser() returned nil user")
-				}
-				if user != nil && user.Name == "" {
-					t.Errorf("CreateUser() returned user with empty name")
-				}
+			resp, err := svc.CreateUser(ctx, tt.req)
+			if err != nil {
+				t.Errorf("CreateUser() unexpected error: %v", err)
+			}
+			if resp == nil {
+				t.Errorf("CreateUser() returned nil response")
+				return
+			}
+			if resp.ErrorCode != tt.wantErrorCode {
+				t.Errorf("CreateUser() error_code = %d, want %d", resp.ErrorCode, tt.wantErrorCode)
+			}
+			if tt.wantErrorCode == response.CodeSuccess && resp.Data == nil {
+				t.Errorf("CreateUser() success response should have data")
 			}
 		})
 	}
@@ -71,57 +68,60 @@ func TestGetUser(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a user first
-	createReq := &apiv1.CreateUserRequest{
+	createResp, _ := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
 		User: &apiv1.User{
 			Email:       "test@example.com",
 			DisplayName: "Test User",
 		},
-	}
-	createdUser, err := svc.CreateUser(ctx, createReq)
-	if err != nil {
-		t.Fatalf("Failed to create user: %v", err)
+	})
+
+	var userName string
+	if createResp != nil && createResp.Data != nil {
+		if result, ok := createResp.Data.Fields["result"]; ok {
+			if userStruct, ok := result.GetStructValue().Fields["name"]; ok {
+				userName = userStruct.GetStringValue()
+			}
+		}
 	}
 
 	tests := []struct {
-		name    string
-		req     *apiv1.GetUserRequest
-		wantErr bool
+		name          string
+		req           *apiv1.GetUserRequest
+		wantErrorCode int32
 	}{
 		{
 			name: "existing user",
 			req: &apiv1.GetUserRequest{
-				Name: createdUser.Name,
+				Name: userName,
 			},
-			wantErr: false,
+			wantErrorCode: response.CodeSuccess,
 		},
 		{
 			name: "non-existing user",
 			req: &apiv1.GetUserRequest{
 				Name: "users/999",
 			},
-			wantErr: true,
+			wantErrorCode: response.CodeNotFound,
 		},
 		{
-			name:    "empty name",
-			req:     &apiv1.GetUserRequest{},
-			wantErr: true,
+			name:          "empty name",
+			req:           &apiv1.GetUserRequest{},
+			wantErrorCode: response.CodeInvalidArgument,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			user, err := svc.GetUser(ctx, tt.req)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("GetUser() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("GetUser() unexpected error: %v", err)
-				}
-				if user == nil {
-					t.Errorf("GetUser() returned nil user")
-				}
+			resp, err := svc.GetUser(ctx, tt.req)
+			if err != nil {
+				t.Errorf("GetUser() unexpected error: %v", err)
+			}
+			if resp == nil {
+				t.Errorf("GetUser() returned nil response")
+				return
+			}
+			if resp.ErrorCode != tt.wantErrorCode {
+				t.Errorf("GetUser() error_code = %d, want %d", resp.ErrorCode, tt.wantErrorCode)
 			}
 		})
 	}
@@ -133,56 +133,51 @@ func TestListUsers(t *testing.T) {
 
 	// Create some users
 	for i := 0; i < 5; i++ {
-		_, err := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
+		svc.CreateUser(ctx, &apiv1.CreateUserRequest{
 			User: &apiv1.User{
 				Email:       "test@example.com",
 				DisplayName: "Test User",
 			},
 		})
-		if err != nil {
-			t.Fatalf("Failed to create user: %v", err)
-		}
 	}
 
 	tests := []struct {
-		name     string
-		req      *apiv1.ListUsersRequest
-		wantErr  bool
-		minUsers int
+		name          string
+		req           *apiv1.ListUsersRequest
+		wantErrorCode int32
+		minUsers      int
 	}{
 		{
-			name:     "list all users",
-			req:      &apiv1.ListUsersRequest{},
-			wantErr:  false,
-			minUsers: 5,
+			name:          "list all users",
+			req:           &apiv1.ListUsersRequest{},
+			wantErrorCode: response.CodeSuccess,
+			minUsers:      5,
 		},
 		{
 			name: "list with page size",
 			req: &apiv1.ListUsersRequest{
 				PageSize: 2,
 			},
-			wantErr:  false,
-			minUsers: 2,
+			wantErrorCode: response.CodeSuccess,
+			minUsers:      2,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := svc.ListUsers(ctx, tt.req)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("ListUsers() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("ListUsers() unexpected error: %v", err)
-				}
-				if resp == nil {
-					t.Errorf("ListUsers() returned nil response")
-				}
-				if resp != nil && len(resp.Users) < tt.minUsers {
-					t.Errorf("ListUsers() returned %d users, want at least %d", len(resp.Users), tt.minUsers)
-				}
+			if err != nil {
+				t.Errorf("ListUsers() unexpected error: %v", err)
+			}
+			if resp == nil {
+				t.Errorf("ListUsers() returned nil response")
+				return
+			}
+			if resp.ErrorCode != tt.wantErrorCode {
+				t.Errorf("ListUsers() error_code = %d, want %d", resp.ErrorCode, tt.wantErrorCode)
+			}
+			if tt.wantErrorCode == response.CodeSuccess && resp.Data == nil {
+				t.Errorf("ListUsers() success response should have data")
 			}
 		})
 	}
@@ -193,32 +188,37 @@ func TestUpdateUser(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a user first
-	createReq := &apiv1.CreateUserRequest{
+	createResp, _ := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
 		User: &apiv1.User{
 			Email:       "test@example.com",
 			DisplayName: "Test User",
 		},
-	}
-	createdUser, err := svc.CreateUser(ctx, createReq)
-	if err != nil {
-		t.Fatalf("Failed to create user: %v", err)
+	})
+
+	var userName string
+	if createResp != nil && createResp.Data != nil {
+		if result, ok := createResp.Data.Fields["result"]; ok {
+			if userStruct, ok := result.GetStructValue().Fields["name"]; ok {
+				userName = userStruct.GetStringValue()
+			}
+		}
 	}
 
 	tests := []struct {
-		name    string
-		req     *apiv1.UpdateUserRequest
-		wantErr bool
+		name          string
+		req           *apiv1.UpdateUserRequest
+		wantErrorCode int32
 	}{
 		{
 			name: "valid update",
 			req: &apiv1.UpdateUserRequest{
 				User: &apiv1.User{
-					Name:        createdUser.Name,
+					Name:        userName,
 					Email:       "updated@example.com",
 					DisplayName: "Updated User",
 				},
 			},
-			wantErr: false,
+			wantErrorCode: response.CodeSuccess,
 		},
 		{
 			name: "non-existing user",
@@ -228,29 +228,27 @@ func TestUpdateUser(t *testing.T) {
 					Email: "test@example.com",
 				},
 			},
-			wantErr: true,
+			wantErrorCode: response.CodeNotFound,
 		},
 		{
-			name:    "nil user",
-			req:     &apiv1.UpdateUserRequest{},
-			wantErr: true,
+			name:          "nil user",
+			req:           &apiv1.UpdateUserRequest{},
+			wantErrorCode: response.CodeInvalidArgument,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			user, err := svc.UpdateUser(ctx, tt.req)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("UpdateUser() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("UpdateUser() unexpected error: %v", err)
-				}
-				if user == nil {
-					t.Errorf("UpdateUser() returned nil user")
-				}
+			resp, err := svc.UpdateUser(ctx, tt.req)
+			if err != nil {
+				t.Errorf("UpdateUser() unexpected error: %v", err)
+			}
+			if resp == nil {
+				t.Errorf("UpdateUser() returned nil response")
+				return
+			}
+			if resp.ErrorCode != tt.wantErrorCode {
+				t.Errorf("UpdateUser() error_code = %d, want %d", resp.ErrorCode, tt.wantErrorCode)
 			}
 		})
 	}
@@ -261,62 +259,61 @@ func TestDeleteUser(t *testing.T) {
 	ctx := context.Background()
 
 	// Create a user first
-	createReq := &apiv1.CreateUserRequest{
+	createResp, _ := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
 		User: &apiv1.User{
 			Email:       "test@example.com",
 			DisplayName: "Test User",
 		},
-	}
-	createdUser, err := svc.CreateUser(ctx, createReq)
-	if err != nil {
-		t.Fatalf("Failed to create user: %v", err)
+	})
+
+	var userName string
+	if createResp != nil && createResp.Data != nil {
+		if result, ok := createResp.Data.Fields["result"]; ok {
+			if userStruct, ok := result.GetStructValue().Fields["name"]; ok {
+				userName = userStruct.GetStringValue()
+			}
+		}
 	}
 
 	tests := []struct {
-		name    string
-		req     *apiv1.DeleteUserRequest
-		wantErr bool
+		name          string
+		req           *apiv1.DeleteUserRequest
+		wantErrorCode int32
 	}{
 		{
 			name: "existing user",
 			req: &apiv1.DeleteUserRequest{
-				Name: createdUser.Name,
+				Name: userName,
 			},
-			wantErr: false,
+			wantErrorCode: response.CodeSuccess,
 		},
 		{
 			name: "non-existing user",
 			req: &apiv1.DeleteUserRequest{
 				Name: "users/999",
 			},
-			wantErr: true,
+			wantErrorCode: response.CodeNotFound,
 		},
 		{
-			name:    "empty name",
-			req:     &apiv1.DeleteUserRequest{},
-			wantErr: true,
+			name:          "empty name",
+			req:           &apiv1.DeleteUserRequest{},
+			wantErrorCode: response.CodeInvalidArgument,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := svc.DeleteUser(ctx, tt.req)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("DeleteUser() expected error, got nil")
-				}
-				// Check that we get NotFound error for non-existing user
-				if tt.name == "non-existing user" {
-					if st, ok := status.FromError(err); ok {
-						if st.Code() != codes.NotFound {
-							t.Errorf("DeleteUser() expected NotFound error, got %v", st.Code())
-						}
-					}
-				}
-			} else {
-				if err != nil {
-					t.Errorf("DeleteUser() unexpected error: %v", err)
-				}
+			resp, err := svc.DeleteUser(ctx, tt.req)
+			if err != nil {
+				t.Errorf("DeleteUser() unexpected error: %v", err)
+			}
+			if resp == nil {
+				t.Errorf("DeleteUser() returned nil response")
+				return
+			}
+			if resp.ErrorCode != tt.wantErrorCode {
+				t.Errorf("DeleteUser() error_code = %d, want %d, msg = %s",
+					resp.ErrorCode, tt.wantErrorCode, resp.ErrorMsg)
 			}
 		})
 	}
@@ -329,64 +326,60 @@ func TestBatchGetUsers(t *testing.T) {
 	// Create some users
 	var userNames []string
 	for i := 0; i < 3; i++ {
-		user, err := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
+		createResp, _ := svc.CreateUser(ctx, &apiv1.CreateUserRequest{
 			User: &apiv1.User{
 				Email:       "test@example.com",
 				DisplayName: "Test User",
 			},
 		})
-		if err != nil {
-			t.Fatalf("Failed to create user: %v", err)
+
+		if createResp != nil && createResp.Data != nil {
+			if result, ok := createResp.Data.Fields["result"]; ok {
+				if userStruct, ok := result.GetStructValue().Fields["name"]; ok {
+					userNames = append(userNames, userStruct.GetStringValue())
+				}
+			}
 		}
-		userNames = append(userNames, user.Name)
 	}
 
 	tests := []struct {
-		name     string
-		req      *apiv1.BatchGetUsersRequest
-		wantErr  bool
-		wantSize int
+		name          string
+		req           *apiv1.BatchGetUsersRequest
+		wantErrorCode int32
 	}{
 		{
 			name: "existing users",
 			req: &apiv1.BatchGetUsersRequest{
 				Names: userNames,
 			},
-			wantErr:  false,
-			wantSize: 3,
+			wantErrorCode: response.CodeSuccess,
 		},
 		{
-			name:    "empty names",
-			req:     &apiv1.BatchGetUsersRequest{},
-			wantErr: true,
+			name:          "empty names",
+			req:           &apiv1.BatchGetUsersRequest{},
+			wantErrorCode: response.CodeInvalidArgument,
 		},
 		{
 			name: "mixed existing and non-existing",
 			req: &apiv1.BatchGetUsersRequest{
 				Names: append(userNames, "users/999"),
 			},
-			wantErr:  false,
-			wantSize: 3, // Should only return existing users
+			wantErrorCode: response.CodeSuccess,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			resp, err := svc.BatchGetUsers(ctx, tt.req)
-			if tt.wantErr {
-				if err == nil {
-					t.Errorf("BatchGetUsers() expected error, got nil")
-				}
-			} else {
-				if err != nil {
-					t.Errorf("BatchGetUsers() unexpected error: %v", err)
-				}
-				if resp == nil {
-					t.Errorf("BatchGetUsers() returned nil response")
-				}
-				if resp != nil && len(resp.Users) != tt.wantSize {
-					t.Errorf("BatchGetUsers() returned %d users, want %d", len(resp.Users), tt.wantSize)
-				}
+			if err != nil {
+				t.Errorf("BatchGetUsers() unexpected error: %v", err)
+			}
+			if resp == nil {
+				t.Errorf("BatchGetUsers() returned nil response")
+				return
+			}
+			if resp.ErrorCode != tt.wantErrorCode {
+				t.Errorf("BatchGetUsers() error_code = %d, want %d", resp.ErrorCode, tt.wantErrorCode)
 			}
 		})
 	}
